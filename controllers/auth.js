@@ -35,92 +35,108 @@ exports.login = async (req, res) => {
   }
 }
 
+exports.related_invite_code = async (req, res, next) => {
+  const related_users = await User.find({ user_invite: req.body.invt });
+  if (related_users.length > 0) {
+    req.body.isInvalidInvite = 'no';
+  } else {
+    req.body.isInvalidInvite = 'yes';
+  }
+  next();
+}
+
 exports.register = async (req, res) => {
-  const { mobno, pwd, wpwd, invt } = req.body;
-  await User.findOne({ "mobno": mobno }).then(async (responses) => {
-    if (responses) {
-      return res.status(200).json({ message: 'Mobile Number already registered!' });
-    } else {
-      if (pwd.length < 6) {
-        return res.status(400).json({ message: "Password less than 6 characters" })
+
+  if (req.body.isInvalidInvite === 'yes') {
+    res.status(200).json({
+      message: 'invalid invite code'
+    });
+  } else {
+    const { mobno, pwd, wpwd, invt } = req.body;
+    await User.findOne({ "mobno": mobno }).then(async (responses) => {
+      if (responses) {
+        return res.status(200).json({ message: 'Mobile Number already registered!' });
+      } else {
+        if (pwd.length < 6) {
+          return res.status(400).json({ message: "Password less than 6 characters" })
+        }
+        try {
+          await User.create({
+            mobno,
+            pwd,
+            wpwd,
+            time: new Date(),
+            balance: 110,
+            recharge_amount: 0,
+            withdrawal_sum: 0,
+            earning: 0,
+            user_invite: referralCodeGenerator.alpha('lowercase', 6),
+            parent_invt: invt,
+            grand_parent_invt: '',
+            directRecharge: 0,
+            indirectRecharge: 0,
+            directMember: [],
+            indirectMember: [],
+            boughtLong: 0,
+            showShort: 0,
+            boughtShort: 0,
+            lastWithdrawal: new Date(),
+            bank_details: new Bank()
+          }).then(async (user) => {
+
+            const parent_data = await User.findOne({ user_invite: user.parent_invt }).then((res) => res);
+            return { user, parent_data };
+
+          }).then(async ({ user, parent_data }) => {
+
+            const grand_parent_data = await User.findOne({ user_invite: parent_data.parent_invt }).then((res) => res)
+            return { user, parent_data, grand_parent_data };
+
+          }).then(async ({ user, parent_data, grand_parent_data }) => {
+
+            const great_grand_parent_data = await User.findOne({ user_invite: grand_parent_data.parent_invt }).then((res) => res)
+            return { user, parent_data, grand_parent_data, great_grand_parent_data };
+
+          }).then(async ({ user, parent_data, grand_parent_data, great_grand_parent_data }) => {
+
+            const newUser = await User.updateOne({ _id: user._id }, {
+              $set: {
+                parent_id: parent_data._id,
+                grand_parent_id: grand_parent_data._id,
+                great_grand_parent_id: great_grand_parent_data._id
+              }
+            });
+
+            await User.updateOne({ _id: parent_data._id },
+              { $push: { directMember: user._id } }
+            );
+
+            await User.updateOne({ _id: grand_parent_data._id },
+              { $push: { indirectMember: user._id } }
+            );
+
+            await User.updateOne({ _id: great_grand_parent_data._id },
+              { $push: { in_indirectMember: user._id } }
+            );
+
+            return user._id;
+          })
+            .then(user_id =>
+              res.status(200).json({
+                message: "User successfully created",
+                user_id: user_id
+              })
+            )
+        } catch (err) {
+          console.log(err);
+          res.status(401).json({
+            message: "User not successful created",
+            error: err,
+          })
+        }
       }
-      try {
-        await User.create({
-          mobno,
-          pwd,
-          wpwd,
-          time: new Date(),
-          balance: 110,
-          recharge_amount: 0,
-          withdrawal_sum: 0,
-          earning: 0,
-          user_invite: referralCodeGenerator.alpha('lowercase', 6),
-          parent_invt: invt,
-          grand_parent_invt: '',
-          directRecharge: 0,
-          indirectRecharge: 0,
-          directMember: [],
-          indirectMember: [],
-          boughtLong: 0,
-          showShort: 0,
-          boughtShort: 0,
-          lastWithdrawal: new Date(),
-          bank_details: new Bank()
-        }).then(async (user) => {
-
-          const parent_data = await User.findOne({ user_invite: user.parent_invt }).then((res) => res);
-          return { user, parent_data };
-
-        }).then(async ({ user, parent_data }) => {
-
-          const grand_parent_data = await User.findOne({ user_invite: parent_data.parent_invt }).then((res) => res)
-          return { user, parent_data, grand_parent_data };
-
-        }).then(async ({ user, parent_data, grand_parent_data }) => {
-
-          const great_grand_parent_data = await User.findOne({ user_invite: grand_parent_data.parent_invt }).then((res) => res)
-          return { user, parent_data, grand_parent_data, great_grand_parent_data };
-
-        }).then(async ({ user, parent_data, grand_parent_data, great_grand_parent_data }) => {
-
-          const newUser = await User.updateOne({ _id: user._id }, {
-            $set: {
-              parent_id: parent_data._id,
-              grand_parent_id: grand_parent_data._id,
-              great_grand_parent_id: great_grand_parent_data._id
-            }
-          });
-
-          await User.updateOne({ _id: parent_data._id },
-            { $push: { directMember: user._id } }
-          );
-
-          await User.updateOne({ _id: grand_parent_data._id },
-            { $push: { indirectMember: user._id } }
-          );
-
-          await User.updateOne({ _id: great_grand_parent_data._id },
-            { $push: { in_indirectMember: user._id } }
-          );
-
-          return user._id;
-        })
-          .then(user_id =>
-            res.status(200).json({
-              message: "User successfully created",
-              user_id: user_id
-            })
-          )
-      } catch (err) {
-        console.log(err);
-        res.status(401).json({
-          message: "User not successful created",
-          error: err,
-        })
-      }
-    }
-  });
-
+    });
+  }
 
 }
 
