@@ -163,13 +163,15 @@ exports.forgotPassword = async (req, res) => {
 
 exports.purchase = async (req, res) => {
   const { balance, boughtLong, boughtShort, plans_purchased, user_id } = req.body;
-  const newPlan = plans_purchased
+  const newPlan = plans_purchased;
+  const data = req.body;
 
   try {
     await User.updateOne({ _id: user_id },
       {
         $set: {
-          balance: balance
+          //balance: balance
+          recharge_amount:recharge_amount
         },
         $inc: {
           boughtLong: boughtLong,
@@ -179,7 +181,37 @@ exports.purchase = async (req, res) => {
           plans_purchased: newPlan
         }
       }
-    )
+    );
+    // Level 1 recharge commission
+    await User.updateOne({ _id: data.parent_id }, {
+      $inc: {
+        balance: Number((20 / 100) * (Number(data.plan_price))),
+        directRecharge: Number(data.plan_price)
+      },
+      $addToSet: {
+        directMember: data.user_id
+      }
+    });
+    // Level 2 recharge commission
+    await User.updateOne({ _id: data.grand_parent_id }, {
+      $inc: {
+        balance: Number((3 / 100) * (Number(data.plan_price))),
+        indirectRecharge: Number(data.plan_price)
+      },
+      $addToSet: {
+        indirectMember: data.user_id
+      }
+    });
+    // Level 3 recharge commission
+    await User.updateOne({ _id: data.great_grand_parent_id }, {
+      $inc: {
+        balance: Number((2 / 100) * (Number(data.plan_price))),
+        in_indirectRecharge: Number(data.plan_price)
+      },
+      $addToSet: {
+        in_indirectMember: data.user_id
+      }
+    });
     res.status(200).json({
       message: 'Plan Purchased Successfully!'
     });
@@ -322,39 +354,39 @@ exports.update_recharge = async (req, res) => {
         await User.updateOne({ _id: data.user_id }, {
           $inc: {
             recharge_amount: data.recharge_value,
-            balance: data.recharge_value
+            //balance: data.recharge_value
           },
         });
         // Level 1 recharge commission
-        await User.updateOne({ _id: data.parent_id }, {
-          $inc: {
-            balance: Number((20 / 100) * (Number(data.recharge_value))),
-            directRecharge: Number(data.recharge_value)
-          },
-          $addToSet: {
-            directMember: data.user_id
-          }
-        });
-        // Level 2 recharge commission
-        await User.updateOne({ _id: data.grand_parent_id }, {
-          $inc: {
-            balance: Number((3 / 100) * (Number(data.recharge_value))),
-            indirectRecharge: Number(data.recharge_value)
-          },
-          $addToSet: {
-            indirectMember: data.user_id
-          }
-        });
-        // Level 3 recharge commission
-        await User.updateOne({ _id: data.great_grand_parent_id }, {
-          $inc: {
-            balance: Number((2 / 100) * (Number(data.recharge_value))),
-            in_indirectRecharge: Number(data.recharge_value)
-          },
-          $addToSet: {
-            in_indirectMember: data.user_id
-          }
-        });
+        // await User.updateOne({ _id: data.parent_id }, {
+        //   $inc: {
+        //     balance: Number((20 / 100) * (Number(data.recharge_value))),
+        //     directRecharge: Number(data.recharge_value)
+        //   },
+        //   $addToSet: {
+        //     directMember: data.user_id
+        //   }
+        // });
+        // // Level 2 recharge commission
+        // await User.updateOne({ _id: data.grand_parent_id }, {
+        //   $inc: {
+        //     balance: Number((3 / 100) * (Number(data.recharge_value))),
+        //     indirectRecharge: Number(data.recharge_value)
+        //   },
+        //   $addToSet: {
+        //     indirectMember: data.user_id
+        //   }
+        // });
+        // // Level 3 recharge commission
+        // await User.updateOne({ _id: data.great_grand_parent_id }, {
+        //   $inc: {
+        //     balance: Number((2 / 100) * (Number(data.recharge_value))),
+        //     in_indirectRecharge: Number(data.recharge_value)
+        //   },
+        //   $addToSet: {
+        //     in_indirectMember: data.user_id
+        //   }
+        // });
       }
     });
 
