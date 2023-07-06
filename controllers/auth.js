@@ -162,7 +162,7 @@ exports.forgotPassword = async (req, res) => {
 }
 
 exports.purchase = async (req, res) => {
-  const { balance, boughtLong, boughtShort, plans_purchased, user_id } = req.body;
+  const { balance, boughtLong, boughtShort, plans_purchased, user_id, recharge_amount } = req.body;
   const newPlan = plans_purchased;
   const data = req.body;
 
@@ -279,11 +279,12 @@ exports.bank_details = async (req, res) => {
 }
 
 exports.related_recharges = async (req, res, next) => {
-  const related_recharge = await Recharge.find({ refno: req.body.refno });
-  if (related_recharge.length > 0) {
-    req.body.refnoexists = 'yes';
-  } else {
+  const related_recharge = await Recharge.findOne({ refno: req.body.refno });
+  //console.log(related_recharge);
+  if (related_recharge === null) {
     req.body.refnoexists = 'no';
+  } else {
+    req.body.refnoexists = 'yes';
   }
   next();
 }
@@ -291,9 +292,10 @@ exports.related_recharges = async (req, res, next) => {
 exports.place_recharge = async (req, res) => {
 
   const data = req.body;
-  console.log(req.body);
+  //console.log(req.body);
 
-  if (req.body.refnoexists === 'yes') {
+  if (data.refnoexists == 'yes') {
+    //console.log('refno already exists')
     res.status(200).json({
       message: 'refno already exists'
     });
@@ -310,6 +312,7 @@ exports.place_recharge = async (req, res) => {
             }
           })
         });
+      //console.log('recharge placed successfully');
       res.status(200).json({
         message: 'Recharge Placed Successfully'
       });
