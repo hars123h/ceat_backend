@@ -9,12 +9,12 @@ const { place_recharge, register, login, forgotPassword,
         get_all_controllers, get_all_feedbacks, get_blocked_users, add_blocked_users,
         get_user, get_user_recharges, get_user_withdrawals, get_paginated_user,
         update_balance, search_users, get_promo_amount, invite_rewards, lvl1, lvl2, lvl3,
-        withdrawalSum, related_recharges, related_invite_code
+        withdrawalSum, related_recharges
 } = require('../controllers/auth');
 
 const router = express.Router();
 
-router.post("/register", related_invite_code ,register);
+router.post("/register", register);
 router.post("/login", login);
 router.post("/forgot_password", forgotPassword);
 router.post("/purchase", purchase);
