@@ -35,108 +35,92 @@ exports.login = async (req, res) => {
   }
 }
 
-exports.related_invite_code = async (req, res, next) => {
-  const related_users = await User.find({ user_invite: req.body.invt });
-  if (related_users.length > 0) {
-    req.body.isInvalidInvite = 'no';
-  } else {
-    req.body.isInvalidInvite = 'yes';
-  }
-  next();
-}
-
 exports.register = async (req, res) => {
-
-  if (req.body.isInvalidInvite === 'yes') {
-    res.status(200).json({
-      message: 'invalid invite code'
-    });
-  } else {
-    const { mobno, pwd, wpwd, invt } = req.body;
-    await User.findOne({ "mobno": mobno }).then(async (responses) => {
-      if (responses) {
-        return res.status(200).json({ message: 'Mobile Number already registered!' });
-      } else {
-        if (pwd.length < 6) {
-          return res.status(400).json({ message: "Password less than 6 characters" })
-        }
-        try {
-          await User.create({
-            mobno,
-            pwd,
-            wpwd,
-            time: new Date(),
-            balance: 50,
-            recharge_amount: 0,
-            withdrawal_sum: 0,
-            earning: 0,
-            user_invite: referralCodeGenerator.alpha('lowercase', 6),
-            parent_invt: invt,
-            grand_parent_invt: '',
-            directRecharge: 0,
-            indirectRecharge: 0,
-            directMember: [],
-            indirectMember: [],
-            boughtLong: 0,
-            showShort: 0,
-            boughtShort: 0,
-            lastWithdrawal: new Date(),
-            bank_details: new Bank()
-          }).then(async (user) => {
-
-            const parent_data = await User.findOne({ user_invite: user.parent_invt }).then((res) => res);
-            return { user, parent_data };
-
-          }).then(async ({ user, parent_data }) => {
-
-            const grand_parent_data = await User.findOne({ user_invite: parent_data.parent_invt }).then((res) => res)
-            return { user, parent_data, grand_parent_data };
-
-          }).then(async ({ user, parent_data, grand_parent_data }) => {
-
-            const great_grand_parent_data = await User.findOne({ user_invite: grand_parent_data.parent_invt }).then((res) => res)
-            return { user, parent_data, grand_parent_data, great_grand_parent_data };
-
-          }).then(async ({ user, parent_data, grand_parent_data, great_grand_parent_data }) => {
-
-            const newUser = await User.updateOne({ _id: user._id }, {
-              $set: {
-                parent_id: parent_data._id,
-                grand_parent_id: grand_parent_data._id,
-                great_grand_parent_id: great_grand_parent_data._id
-              }
-            });
-
-            await User.updateOne({ _id: parent_data._id },
-              { $push: { directMember: user._id } }
-            );
-
-            await User.updateOne({ _id: grand_parent_data._id },
-              { $push: { indirectMember: user._id } }
-            );
-
-            await User.updateOne({ _id: great_grand_parent_data._id },
-              { $push: { in_indirectMember: user._id } }
-            );
-
-            return user._id;
-          })
-            .then(user_id =>
-              res.status(200).json({
-                message: "User successfully created",
-                user_id: user_id
-              })
-            )
-        } catch (err) {
-          console.log(err);
-          res.status(401).json({
-            message: "User not successful created",
-            error: err,
-          })
-        }
+  const { mobno, pwd, wpwd, invt } = req.body;
+  await User.findOne({ "mobno": mobno }).then(async (responses) => {
+    if (responses) {
+      return res.status(200).json({ message: 'Mobile Number already registered!' });
+    } else {
+      if (pwd.length < 6) {
+        return res.status(400).json({ message: "Password less than 6 characters" })
       }
-    });
-  }
+      try {
+        await User.create({
+          mobno,
+          pwd,
+          wpwd,
+          time: new Date(),
+          balance: 10,
+          recharge_amount: 0,
+          withdrawal_sum: 0,
+          earning: 0,
+          user_invite: referralCodeGenerator.alpha('lowercase', 6),
+          parent_invt: invt,
+          grand_parent_invt: '',
+          directRecharge: 0,
+          indirectRecharge: 0,
+          directMember: [],
+          indirectMember: [],
+          boughtLong: 0,
+          showShort: 0,
+          boughtShort: 0,
+          lastWithdrawal: new Date(),
+          bank_details: new Bank()
+        }).then(async (user) => {
+
+          const parent_data = await User.findOne({ user_invite: user.parent_invt }).then((res) => res);
+          return { user, parent_data };
+
+        }).then(async ({ user, parent_data }) => {
+
+          const grand_parent_data = await User.findOne({ user_invite: parent_data.parent_invt }).then((res) => res)
+          return { user, parent_data, grand_parent_data };
+
+        }).then(async ({ user, parent_data, grand_parent_data }) => {
+
+          const great_grand_parent_data = await User.findOne({ user_invite: grand_parent_data.parent_invt }).then((res) => res)
+          return { user, parent_data, grand_parent_data, great_grand_parent_data };
+
+        }).then(async ({ user, parent_data, grand_parent_data, great_grand_parent_data }) => {
+
+          const newUser = await User.updateOne({ _id: user._id }, {
+            $set: {
+              parent_id: parent_data._id,
+              grand_parent_id: grand_parent_data._id,
+              great_grand_parent_id: great_grand_parent_data._id
+            }
+          });
+
+          await User.updateOne({ _id: parent_data._id },
+            { $push: { directMember: user._id } }
+          );
+
+          await User.updateOne({ _id: grand_parent_data._id },
+            { $push: { indirectMember: user._id } }
+          );
+
+          await User.updateOne({ _id: great_grand_parent_data._id },
+            { $push: { in_indirectMember: user._id } }
+          );
+
+          return user._id;
+        })
+          .then(user_id =>
+            res.status(200).json({
+              message: "User successfully created",
+              user_id: user_id
+            })
+          )
+      } catch (err) {
+        console.log(err);
+        res.status(401).json({
+          message: "User not successful created",
+          error: err,
+        })
+      }
+    }
+  });
+
 
 }
 
@@ -162,16 +146,14 @@ exports.forgotPassword = async (req, res) => {
 }
 
 exports.purchase = async (req, res) => {
-  const { balance, boughtLong, boughtShort, plans_purchased, user_id, recharge_amount } = req.body;
-  const newPlan = plans_purchased;
-  const data = req.body;
+  const { balance, boughtLong, boughtShort, plans_purchased, user_id } = req.body;
+  const newPlan = plans_purchased
 
   try {
     await User.updateOne({ _id: user_id },
       {
         $set: {
-          //balance: balance
-          recharge_amount:recharge_amount
+          balance: balance
         },
         $inc: {
           boughtLong: boughtLong,
@@ -181,37 +163,7 @@ exports.purchase = async (req, res) => {
           plans_purchased: newPlan
         }
       }
-    );
-    // Level 1 recharge commission
-    await User.updateOne({ _id: data.parent_id }, {
-      $inc: {
-        balance: Number((20 / 100) * (Number(data.plan_price))),
-        directRecharge: Number(data.plan_price)
-      },
-      $addToSet: {
-        directMember: data.user_id
-      }
-    });
-    // Level 2 recharge commission
-    await User.updateOne({ _id: data.grand_parent_id }, {
-      $inc: {
-        balance: Number((3 / 100) * (Number(data.plan_price))),
-        indirectRecharge: Number(data.plan_price)
-      },
-      $addToSet: {
-        indirectMember: data.user_id
-      }
-    });
-    // Level 3 recharge commission
-    await User.updateOne({ _id: data.great_grand_parent_id }, {
-      $inc: {
-        balance: Number((2 / 100) * (Number(data.plan_price))),
-        in_indirectRecharge: Number(data.plan_price)
-      },
-      $addToSet: {
-        in_indirectMember: data.user_id
-      }
-    });
+    )
     res.status(200).json({
       message: 'Plan Purchased Successfully!'
     });
@@ -279,12 +231,11 @@ exports.bank_details = async (req, res) => {
 }
 
 exports.related_recharges = async (req, res, next) => {
-  const related_recharge = await Recharge.findOne({ refno: req.body.refno });
-  //console.log(related_recharge);
-  if (related_recharge === null) {
-    req.body.refnoexists = 'no';
-  } else {
+  const related_recharge = await Recharge.find({ refno: req.body.refno });
+  if (related_recharge.length > 0) {
     req.body.refnoexists = 'yes';
+  } else {
+    req.body.refnoexists = 'no';
   }
   next();
 }
@@ -292,10 +243,9 @@ exports.related_recharges = async (req, res, next) => {
 exports.place_recharge = async (req, res) => {
 
   const data = req.body;
-  //console.log(req.body);
+  console.log(req.body);
 
-  if (data.refnoexists == 'yes') {
-    //console.log('refno already exists')
+  if (req.body.refnoexists === 'yes') {
     res.status(200).json({
       message: 'refno already exists'
     });
@@ -312,7 +262,6 @@ exports.place_recharge = async (req, res) => {
             }
           })
         });
-      //console.log('recharge placed successfully');
       res.status(200).json({
         message: 'Recharge Placed Successfully'
       });
@@ -357,39 +306,39 @@ exports.update_recharge = async (req, res) => {
         await User.updateOne({ _id: data.user_id }, {
           $inc: {
             recharge_amount: data.recharge_value,
-            //balance: data.recharge_value
+            balance: data.recharge_value
           },
         });
         // Level 1 recharge commission
-        // await User.updateOne({ _id: data.parent_id }, {
-        //   $inc: {
-        //     balance: Number((20 / 100) * (Number(data.recharge_value))),
-        //     directRecharge: Number(data.recharge_value)
-        //   },
-        //   $addToSet: {
-        //     directMember: data.user_id
-        //   }
-        // });
-        // // Level 2 recharge commission
-        // await User.updateOne({ _id: data.grand_parent_id }, {
-        //   $inc: {
-        //     balance: Number((3 / 100) * (Number(data.recharge_value))),
-        //     indirectRecharge: Number(data.recharge_value)
-        //   },
-        //   $addToSet: {
-        //     indirectMember: data.user_id
-        //   }
-        // });
-        // // Level 3 recharge commission
-        // await User.updateOne({ _id: data.great_grand_parent_id }, {
-        //   $inc: {
-        //     balance: Number((2 / 100) * (Number(data.recharge_value))),
-        //     in_indirectRecharge: Number(data.recharge_value)
-        //   },
-        //   $addToSet: {
-        //     in_indirectMember: data.user_id
-        //   }
-        // });
+        await User.updateOne({ _id: data.parent_id }, {
+          $inc: {
+            balance: Number((10 / 100) * (Number(data.recharge_value))),
+            directRecharge: Number(data.recharge_value)
+          },
+          $addToSet: {
+            directMember: data.user_id
+          }
+        });
+        // Level 2 recharge commission
+        await User.updateOne({ _id: data.grand_parent_id }, {
+          $inc: {
+            balance: Number((5 / 100) * (Number(data.recharge_value))),
+            indirectRecharge: Number(data.recharge_value)
+          },
+          $addToSet: {
+            indirectMember: data.user_id
+          }
+        });
+        // Level 3 recharge commission
+        await User.updateOne({ _id: data.great_grand_parent_id }, {
+          $inc: {
+            balance: Number((2 / 100) * (Number(data.recharge_value))),
+            in_indirectRecharge: Number(data.recharge_value)
+          },
+          $addToSet: {
+            in_indirectMember: data.user_id
+          }
+        });
       }
     });
 
