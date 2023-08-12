@@ -146,14 +146,14 @@ exports.forgotPassword = async (req, res) => {
 }
 
 exports.purchase = async (req, res) => {
-  const { balance, boughtLong, boughtShort, plans_purchased, user_id } = req.body;
+  const { recharge_amount, boughtLong, boughtShort, plans_purchased, user_id } = req.body;
   const newPlan = plans_purchased
 
   try {
     await User.updateOne({ _id: user_id },
       {
         $set: {
-          balance: balance
+          recharge_amount: recharge_amount
         },
         $inc: {
           boughtLong: boughtLong,
