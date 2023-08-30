@@ -306,7 +306,7 @@ exports.update_recharge = async (req, res) => {
         await User.updateOne({ _id: data.user_id }, {
           $inc: {
             recharge_amount: data.recharge_value,
-            // balance: data.recharge_value
+             balance: data.recharge_value
           },
         });
         // Level 1 recharge commission
