@@ -393,7 +393,9 @@ exports.place_withdrawal = async (req, res) => {
   } else {
     res.status(400).json({
       message: 'Something went wrong!',
-      error: error.message
+      error: {
+        message: 'adfter deduction is null'
+      }
     });
   }
 
