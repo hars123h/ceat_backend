@@ -154,7 +154,7 @@ exports.purchase = async (req, res) => {
       {
         $set: {
           // recharge_amount: recharge_amount,
-          balance:balance
+          balance: balance
         },
         $inc: {
           boughtLong: boughtLong,
@@ -307,7 +307,7 @@ exports.update_recharge = async (req, res) => {
         await User.updateOne({ _id: data.user_id }, {
           $inc: {
             recharge_amount: data.recharge_value,
-             balance: data.recharge_value
+            balance: data.recharge_value
           },
         });
         // Level 1 recharge commission
@@ -356,37 +356,47 @@ exports.update_recharge = async (req, res) => {
 
 exports.place_withdrawal = async (req, res) => {
 
+
+
   const data = req.body;
   console.log(data);
-  try {
-    Withdrawal.create(data)
-      .then(async (response) => {
-        await User.updateOne({ _id: data.user_id }, {
-          $push: {
-            withdrawals: {
-              withdrawals_id: response._id,
-              time: response.time
+  if (data.afterDeduction !== null) {
+    try {
+      Withdrawal.create(data)
+        .then(async (response) => {
+          await User.updateOne({ _id: data.user_id }, {
+            $push: {
+              withdrawals: {
+                withdrawals_id: response._id,
+                time: response.time
+              }
+            },
+            $set: {
+              balance: (data.balance - data.withdrawalAmount),
+              lastWithdrawal: data.time
+            },
+            $inc: {
+              withdrawal_sum: data.withdrawalAmount,
             }
-          },
-          $set: {
-            balance: (data.balance - data.withdrawalAmount),
-            lastWithdrawal: data.time
-          },
-          $inc: {
-            withdrawal_sum: data.withdrawalAmount,
-          }
-        })
+          })
+        });
+      res.status(200).json({
+        message: 'Withdrawal Requeste Placed Successfully',
+        data
+      })
+    } catch (error) {
+      res.status(400).json({
+        message: 'Something went wrong!',
+        error: error.message
       });
-    res.status(200).json({
-      message: 'Withdrawal Requeste Placed Successfully',
-      data
-    })
-  } catch (error) {
+    }
+  } else {
     res.status(400).json({
       message: 'Something went wrong!',
       error: error.message
     });
   }
+
 
 }
 
