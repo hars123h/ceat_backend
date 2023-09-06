@@ -10,6 +10,11 @@ const Amount = require('../model/amount');
 const Controller = require("../model/controller");
 const Blocked = require('../model/blocked');
 
+process.on('uncaughtException', function (err) {
+  console.error(err);
+  console.log("Node NOT Exiting...");
+  console.log(err.stack);
+});
 
 exports.login = async (req, res) => {
   const { mobno, pwd } = req.body
